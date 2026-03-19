@@ -85,7 +85,7 @@ fun SplashScreen(navController: NavHostController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color(0xFFD84B4B)),
+            .background(color = Color(0xFF3F51B5)),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -105,7 +105,7 @@ fun SplashScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.width(8.dp))
 
             Image(
-                painter = painterResource(id = R.drawable.hamburguesa),
+                painter = painterResource(id = R.drawable.logope),
                 contentDescription = stringResource(id = R.string.app_name),
                 modifier = Modifier
                     .size(width = 120.dp, height = 100.dp)

@@ -8,6 +8,8 @@ import android.provider.Settings
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,7 +47,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -65,10 +66,8 @@ import com.tatanstudios.astropollococina.componentes.CustomModal1Boton
 import com.tatanstudios.astropollococina.componentes.CustomToasty
 import com.tatanstudios.astropollococina.componentes.LoadingModal
 import com.tatanstudios.astropollococina.componentes.ToastType
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 
-// Paleta de colores institucional
+// ── Paleta de colores institucional ─────────────────────────────────────────
 private val AzulOscuro  = Color(0xFF0D1B4B)
 private val AzulMedio   = Color(0xFF1A3A7A)
 private val AzulClaro   = Color(0xFF2E5FBF)
@@ -77,6 +76,7 @@ private val BlancoPuro  = Color(0xFFFFFFFF)
 private val GrisCard    = Color(0xFFF4F6FB)
 private val GrisTexto   = Color(0xFF5A6580)
 
+// ── Pantalla principal ───────────────────────────────────────────────────────
 @Composable
 fun LoginScreen(navController: NavHostController, viewModel: NuevasOrdenesViewModel = viewModel()) {
 
@@ -94,10 +94,20 @@ fun LoginScreen(navController: NavHostController, viewModel: NuevasOrdenesViewMo
     var showModal1Boton by remember { mutableStateOf(false) }
     var modalMensajeString by remember { mutableStateOf("") }
 
+    // ── Modal de batería ─────────────────────────────────────────────────────
+    var showBatteryModal by remember { mutableStateOf(false) }
+
+    // ── Inicialización ───────────────────────────────────────────────────────
     LaunchedEffect(Unit) {
         viewModel.nuevasOrdenesRetrofit()
+        solicitarPermisoBateria(ctx) {
+            // Este bloque se ejecuta solo si el intent del sistema falla
+            // (algunos fabricantes como Xiaomi/Huawei lo bloquean)
+            showBatteryModal = true
+        }
     }
 
+    // ── Manejo de resultado del API ──────────────────────────────────────────
     resultado?.getContentIfNotHandled()?.let { result ->
         when (result.success) {
             1 -> { listaTickets = result.lista }
@@ -116,16 +126,15 @@ fun LoginScreen(navController: NavHostController, viewModel: NuevasOrdenesViewMo
             .fillMaxSize()
             .background(brush = fondoDegradado)
             .statusBarsPadding()
-            .navigationBarsPadding()  // ← respeta los botones de navegación
+            .navigationBarsPadding()
             .imePadding()
     ) {
-        // Todo en un solo LazyColumn con scroll
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
 
-            // ── Header ────────────────────────────────────────────────────
+            // ── Header ───────────────────────────────────────────────────────
             item {
                 Column(
                     modifier = Modifier
@@ -181,7 +190,7 @@ fun LoginScreen(navController: NavHostController, viewModel: NuevasOrdenesViewMo
                 }
             }
 
-            // ── Botón recargar ────────────────────────────────────────────
+            // ── Botón recargar ───────────────────────────────────────────────
             item {
                 Button(
                     onClick = {
@@ -212,7 +221,7 @@ fun LoginScreen(navController: NavHostController, viewModel: NuevasOrdenesViewMo
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // ── Inicio del panel blanco redondeado ────────────────────────
+            // ── Panel blanco redondeado ──────────────────────────────────────
             item {
                 Box(
                     modifier = Modifier
@@ -241,7 +250,7 @@ fun LoginScreen(navController: NavHostController, viewModel: NuevasOrdenesViewMo
                 }
             }
 
-            // ── Items de la lista ─────────────────────────────────────────
+            // ── Items de la lista ────────────────────────────────────────────
             items(listaTickets) { ticket ->
                 Box(
                     modifier = Modifier
@@ -253,7 +262,7 @@ fun LoginScreen(navController: NavHostController, viewModel: NuevasOrdenesViewMo
                 }
             }
 
-            // ── Cierre del panel blanco + espacio final ───────────────────
+            // ── Cierre del panel blanco ──────────────────────────────────────
             item {
                 Box(
                     modifier = Modifier
@@ -270,6 +279,7 @@ fun LoginScreen(navController: NavHostController, viewModel: NuevasOrdenesViewMo
         }
     }
 
+    // ── Modal de error general ───────────────────────────────────────────────
     if (showModal1Boton) {
         CustomModal1Boton(
             showModal1Boton,
@@ -277,10 +287,18 @@ fun LoginScreen(navController: NavHostController, viewModel: NuevasOrdenesViewMo
             onDismiss = { showModal1Boton = false }
         )
     }
+
+    // ── Modal de batería (fallback para fabricantes que bloquean el intent) ──
+    if (showBatteryModal) {
+        CustomModal1Boton(
+            showBatteryModal,
+            "Para recibir notificaciones en tiempo real, permite que esta app funcione sin restricciones de batería. Ve a Ajustes > Batería y busca esta aplicación.",
+            onDismiss = { showBatteryModal = false }
+        )
+    }
 }
 
 // ── Item de cada ticket ──────────────────────────────────────────────────────
-
 @Composable
 fun TicketItem(ticket: ModeloTicketPendiente) {
     Card(
@@ -341,8 +359,36 @@ fun TicketItem(ticket: ModeloTicketPendiente) {
     }
 }
 
-// ── OneSignal ────────────────────────────────────────────────────────────────
+// ── Permiso de batería ───────────────────────────────────────────────────────
 
+/**
+ * Solicita al sistema que excluya esta app de la optimización de batería.
+ * Requiere en AndroidManifest.xml:
+ *   <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+ *
+ * @param context       Contexto de la app.
+ * @param onFallback    Se ejecuta si el intent del sistema falla
+ *                      (algunos fabricantes como Xiaomi/Huawei lo bloquean).
+ */
+fun solicitarPermisoBateria(context: Context, onFallback: () -> Unit) {
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    val packageName = context.packageName
+
+    // Si ya tiene el permiso, no hacemos nada
+    if (powerManager.isIgnoringBatteryOptimizations(packageName)) return
+
+    try {
+        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = Uri.parse("package:$packageName")
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        // El fabricante bloqueó el intent estándar → mostrar modal informativo
+        onFallback()
+    }
+}
+
+// ── OneSignal ────────────────────────────────────────────────────────────────
 fun getOneSignalUserId(): String {
     return OneSignal.User.pushSubscription.id
 }

@@ -9,11 +9,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitBuilder {
 
     //** SERVIDOR
-   // private const val BASE_URL = "http://165.227.196.71/api/"
+    private const val BASE_URL = "http://190.86.196.105/bitacorasuti.com/api/"
 
 
     //** LOCAL
-    private const val BASE_URL = "http://192.168.1.4:8000/api/"
+   // private const val BASE_URL = "http://192.168.1.4:8000/api/"
 
     private var retrofit: Retrofit? = null
     private var apiService: ApiService? = null
